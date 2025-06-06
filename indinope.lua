@@ -11,14 +11,16 @@ require('common')
 
 jit.on()
 
-local offsets = T{[0x00D] = 67, [0x037] = 88}
+local offsets = T{[0x00D] = 0x42, [0x00E] = 0x34,  [0x037] = 88}
 
 ashita.events.register('packet_in', 'packet_in_cb', function(e)
     if (e.blocked or not offsets:containskey(e.id)) then return end
+    
     local offset = offsets[e.id]
     local pointer = ffi.cast('uint8_t*', e.data_modified_raw) -- gets entire packet struct
-    local flags = struct.unpack('<b', e.data_modified, offset) -- gets specifically the (0x00D) flags5_t/ (0x037) flags4_t struct
-    if bit.band(flags, 0x7F) then -- check if any of the first 3 bits are set
-        pointer[offset] = bit.bxor(pointer[offset], 0x40)
+    if e.id == 0x00E then
+        pointer[offset] = bit.band(pointer[offset], 0xF7)
+    elseif bit.band(pointer[offset], 0x7F) then -- check if any of the first 3 bits are set
+        pointer[offset] = bit.band(pointer[offset], 0x80)
     end
 end)
